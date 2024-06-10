@@ -1,0 +1,25 @@
+---
+global:
+  provider: local
+  env: dev
+  network: mainnet
+  elc: besu
+  clc: teku
+
+besu:
+  restore:
+    enabled: false
+    snapshot: ""
+  affinity: {}
+  tolerations: {}
+  storage:
+    size: "5Gi"
+
+teku:
+  restore:
+    enabled: false
+    snapshot: ""
+  affinity: {}
+  tolerations: {}   
+  storage:
+    size: "5Gi"
