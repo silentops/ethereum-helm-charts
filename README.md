@@ -15,7 +15,7 @@ An Ethereum Helm chart for Kubernetes
 
 ### Test:
 ```
-helm template josh ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku.yaml > /tmp/besu-teku-mainnet.yml
+helm template josh2 ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-azure.yaml > /tmp/besu-teku-mainnet.yml
 ```
 
 curl -X POST --data '{"jsonrpc":"2.0", "method":"admin_changeLogLevel", "params":["DEBUG", ["org.hyperledger.besu.ethereum.eth.manager","org.hyperledger.besu.ethereum.p2p.rlpx.connections.netty.ApiHandler","net.consensys.fleet.common.rpc.client"]], "id":1}' http://10.8.8.110:8545

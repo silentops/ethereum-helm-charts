@@ -1,0 +1,65 @@
+---
+global:
+  provider: azure
+  env: dev
+  network: mainnet
+  elc: besu
+  clc: teku
+  snapshot:
+    # sot (source of truth) node, ie this is what we will create snapshots of
+    sot: true
+    # use the defaults of hourly, daily, weekly
+    schedule: "@hourly"
+
+besu:
+  restore:
+    enabled: false
+    snapshot: ""
+  storage:
+    allowVolumeExpansion: true
+    volumeBindingMode: WaitForFirstConsumer
+    reclaimPolicy: Delete
+    size: "250Gi"
+    parameters:
+      skuName: Premium_LRS
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              workloadType: ethereum
+          topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: workloadType
+            operator: In
+            values:
+            - ethereum
+teku:
+  restore:
+    enabled: false
+    snapshot: ""
+  storage:
+    allowVolumeExpansion: true
+    volumeBindingMode: WaitForFirstConsumer
+    reclaimPolicy: Delete
+    size: "250Gi"
+    parameters:
+      skuName: Premium_LRS
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              workloadType: ethereum
+          topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: workloadType
+            operator: In
+            values:
+            - ethereum      

@@ -79,8 +79,7 @@ storage:
   volumeBindingMode: WaitForFirstConsumer
   reclaimPolicy: Delete
   size: "1000Gi"
-  parameters:
-    type: gp3
+  parameters: {}
   ## for azure https://learn.microsoft.com/en-us/azure/aks/azure-csi-files-storage-provision
   # parameters:
   #   skuName: Premium_LRS

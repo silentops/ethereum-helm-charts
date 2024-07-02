@@ -21,7 +21,7 @@ parameters:
   {{- end }}
 {{- else if eq .Values.global.provider "azure" }}
 allowVolumeExpansion: {{ .Values.storage.allowVolumeExpansion }}
-provisioner:  managed-csi-premium
+provisioner: disk.csi.azure.com
 parameters:
   {{- with .Values.storage.parameters }}
   {{- toYaml . | nindent 2 }}
