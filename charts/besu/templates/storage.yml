@@ -111,13 +111,6 @@ parameters:
   tagSpecification_5: "sync-mode={{ .Values.settings.syncMode }}"  
 {{- else if eq .Values.global.provider "azure" }}
 driver: disk.csi.azure.com
-# TODO - check this on azure
-parameters:
-  tagSpecification_1: "name={{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}"
-  tagSpecification_2: "network={{ .Values.global.network }}"
-  tagSpecification_3: "elc=besu"
-  tagSpecification_4: "data-storage-format={{ .Values.settings.dataStorageFormat }}"
-  tagSpecification_5: "sync-mode={{ .Values.settings.syncMode }}"
 {{- end }}  
 
 ---

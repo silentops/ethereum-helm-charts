@@ -1,27 +1,33 @@
-# ethnode
+# Description
 
-An Ethereum Helm chart for Kubernetes
+Ethereum Helm charts for Kubernetes - select your choice of `elc` and `clc` client and you can deploy it to K8S. This also supports `aws` and `azure` so you can pick the appropriate provider. If you are running this locally, please make sure you have a lot of resources avialable ie. disk space, cpu and RAM
 
 ## Values
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| network | string | `"sepolia"` |  |
-| env | string | `"dev"` |  |
-| elc | string | `"besu"` |  |
-| clc | string | `"teku"` |  |
+| Key      | Type   | Default     | Description |
+|----------|--------|-------------|-------------|
+| provider | string | `"local"`   |             |
+| network  | string | `"sepolia"` |             |
+| env      | string | `"dev"`     |             |
+| elc      | string | `"besu"`    |             |
+| clc      | string | `"teku"`    |             |
 
 
 
-### Test:
+### Test the charts:
+local
 ```
-helm template josh2 ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-azure.yaml > /tmp/besu-teku-mainnet.yml
+helm template jl ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-local.yaml > /tmp/besu-teku-mainnet-local.yml
 ```
-
-curl -X POST --data '{"jsonrpc":"2.0", "method":"admin_changeLogLevel", "params":["DEBUG", ["org.hyperledger.besu.ethereum.eth.manager","org.hyperledger.besu.ethereum.p2p.rlpx.connections.netty.ApiHandler","net.consensys.fleet.common.rpc.client"]], "id":1}' http://10.8.8.110:8545
-
+aws
+```
+helm template jw ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-aws.yaml > /tmp/besu-teku-mainnet-aws.yml
+```
+azure
+```
+helm template jz ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-azure.yaml > /tmp/besu-teku-mainnet-azure.yml
+```
 
 ## TODO
-- flag for cloud/local
-- test snapshot scheduler on azure/ignore on local
+- support for validators + w3s
 - add on other clients

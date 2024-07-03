@@ -102,12 +102,7 @@ parameters:
   tagSpecification_2: "network={{ .Values.global.network }}"
   tagSpecification_3: "clc=teku"
 {{- else if eq .Values.global.provider "azure" }}
-driver: managed-csi-premium
-# TODO - check this on azure
-parameters:
-  tagSpecification_1: "name={{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}"
-  tagSpecification_2: "network={{ .Values.global.network }}"
-  tagSpecification_3: "clc=teku"
+driver: disk.csi.azure.com
 {{- end }}  
 ---
 
