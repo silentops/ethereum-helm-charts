@@ -22,12 +22,6 @@ parameters:
 {{- else if eq .Values.global.provider "azure" }}
 allowVolumeExpansion: {{ .Values.storage.allowVolumeExpansion }}
 provisioner: disk.csi.azure.com
-mountOptions:
-  - dir_mode=0755
-  - file_mode=0755
-  - uid=0
-  - gid=0
-  - mfsymlinks
 parameters:
   {{- with .Values.storage.parameters }}
   {{- toYaml . | nindent 2 }}
