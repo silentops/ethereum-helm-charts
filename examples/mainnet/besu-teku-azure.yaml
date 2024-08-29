@@ -11,7 +11,11 @@ global:
     # use the defaults of hourly, daily, weekly
     schedule: "@hourly"
 
-besu:
+elc:
+  image:
+    elc:
+      repository: hyperledger/besu
+      tag: latest
   restore:
     enabled: false
     snapshot: ""
@@ -19,9 +23,16 @@ besu:
     allowVolumeExpansion: true
     volumeBindingMode: WaitForFirstConsumer
     reclaimPolicy: Delete
-    size: "250Gi"
+    size: "1000Gi"
     parameters:
       skuName: Premium_LRS
+  tolerations:
+    - key: ethereum
+      value: "true"
+      effect: NoExecute
+    - key: ethereum
+      value: "true"
+      effect: NoSchedule
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -37,7 +48,12 @@ besu:
             operator: In
             values:
             - ethereum
-teku:
+
+clc:
+  image:
+    clc:
+      repository: consensys/teku
+      tag: latest
   restore:
     enabled: false
     snapshot: ""
@@ -48,6 +64,13 @@ teku:
     size: "250Gi"
     parameters:
       skuName: Premium_LRS
+  tolerations:
+    - key: ethereum
+      value: "true"
+      effect: NoExecute
+    - key: ethereum
+      value: "true"
+      effect: NoSchedule
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:

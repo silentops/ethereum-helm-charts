@@ -4,9 +4,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-config
+  name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-config
   labels:
-    {{- include "ethnode.labels" . | nindent 4 }}
+    {{- include "ethnode-clc.labels" . | nindent 4 }}
   namespace: {{ include "ethnode.namespace" . }}
 data:
   config.yml: |-

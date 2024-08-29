@@ -1,14 +1,12 @@
-{{ if eq .Values.global.clc "teku" -}}
-
 {{- if or (eq .Values.global.provider "aws") (eq .Values.global.provider "azure") }}
 
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
+  name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
   labels:
-    {{- include "ethnode.labels" . | nindent 4 }}  
+    {{- include "ethnode-clc.labels" . | nindent 4 }}  
   namespace: {{ include "ethnode.namespace" . }}
 volumeBindingMode: {{ .Values.storage.volumeBindingMode }}
 reclaimPolicy: {{ .Values.storage.reclaimPolicy }}
@@ -34,18 +32,18 @@ parameters:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
+  name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
   namespace: {{ .Release.Namespace }}
   labels:
     type: local
 spec:
-  storageClassName: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
+  storageClassName: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
   capacity:
     storage: {{ .Values.storage.size | quote }}
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/tmp/{{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage"
+    path: "/tmp/{{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage"
 
 {{- end }}
 
@@ -54,20 +52,20 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-pvc
+  name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-pvc
   labels:
-    name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+    name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
     {{- if or (eq .Values.global.provider "aws") (eq .Values.global.provider "azure") }}
     {{ if .Values.global.snapshot.sot  -}}
     "schedule/{{ .Values.global.snapshot.schedule | replace "@" ""}}": "enabled"
     {{- end }}
-    {{- include "ethnode.labels" . | nindent 4 }}  
+    {{- include "ethnode-clc.labels" . | nindent 4 }}  
     {{- end }}
   namespace: {{ include "ethnode.namespace" . }}
 spec: 
   accessModes:
     - ReadWriteOnce
-  storageClassName: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
+  storageClassName: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-storage
   resources: 
     requests:
       storage: {{ .Values.storage.size | quote }}
@@ -90,15 +88,15 @@ spec:
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshotClass
 metadata:
-  name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-vsc
+  name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-vsc
   labels:
-    {{- include "ethnode.labels" . | nindent 4 }}  
+    {{- include "ethnode-clc.labels" . | nindent 4 }}  
   namespace: {{ include "ethnode.namespace" . }}
 deletionPolicy: Delete
 {{- if eq .Values.global.provider "aws" }}
 driver: ebs.csi.aws.com
 parameters:
-  tagSpecification_1: "name={{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}"
+  tagSpecification_1: "name={{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}"
   tagSpecification_2: "network={{ .Values.global.network }}"
   tagSpecification_3: "clc=teku"
 {{- else if eq .Values.global.provider "azure" }}
@@ -110,14 +108,14 @@ driver: disk.csi.azure.com
 apiVersion: snapscheduler.backube/v1
 kind: SnapshotSchedule
 metadata:
-  name:  {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-vss
+  name:  {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-vss
   namespace: {{ include "ethnode.namespace" . }}
 spec:
   claimSelector:
     matchLabels:
-      name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+      name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
       "schedule/{{ .Values.global.snapshot.schedule | replace "@" ""}}": "enabled"
-      {{- include "ethnode.labels" . | nindent 6 }}      
+      {{- include "ethnode-clc.labels" . | nindent 6 }}      
   schedule: "{{ .Values.global.snapshot.schedule }}"
   retention:
     # retained specified in hours. (168h = 1 week)
@@ -126,11 +124,9 @@ spec:
   # set of labels can be added to each VolumeSnapshot object
   snapshotTemplate:
     labels:  
-      name: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
-      {{- include "ethnode.labels" . | nindent 6 }}  
-    snapshotClassName: {{ include "ethnode.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-vsc
-
-{{- end }}
+      name: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+      {{- include "ethnode-clc.labels" . | nindent 6 }}  
+    snapshotClassName: {{ include "ethnode-clc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-vsc
 
 {{- end }}
 

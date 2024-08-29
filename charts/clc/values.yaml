@@ -1,5 +1,5 @@
 fullnameOverride: ""
-
+clc: default
 provider: local
 network: test
 env: test
@@ -12,13 +12,13 @@ restore:
   enabled: false
   # restore from a particular volumesnapshot
   snapshot: ""
-
+  
 extraLabels: {}
 annotations: {}
 podAnnotations: {}
 affinity: {}
 nodeSelector: {}
-tolerations: {}
+tolerations: []
 securityContext: {}
 
 serviceAccount:
@@ -33,29 +33,21 @@ service:
   labels: {}
   type: ClusterIP
   ports:
-    - name: elc-rpc
-      port: 8545
-      targetPort: elc-rpc
+    - name: clc-libp2p
+      port: 9000
+      targetPort: clc-libp2p
       protocol: TCP
-    - name: elc-ws
-      port: 8546
-      targetPort: elc-ws
-      protocol: TCP
-    - name: elc-rlpx
-      port: 30303
-      targetPort: elc-rlpx
-      protocol: TCP
-    - name: elc-discovery
-      port: 30303
-      targetPort: elc-discovery
+    - name: clc-discovery
+      port: 9000
+      targetPort: clc-discovery
       protocol: UDP
-    - name: elc-metrics
-      port: 9545
-      targetPort: elc-metrics
+    - name: clc-rest
+      port: 5051
+      targetPort: clc-rest
       protocol: TCP
-    - name: elc-engine
-      port: 8551
-      targetPort: elc-engine
+    - name: clc-metrics
+      port: 8008
+      targetPort: clc-metrics
       protocol: TCP
 
 resources:
@@ -65,22 +57,22 @@ resources:
   memRequest: "8G"
 
 image:
-  besu:
-    repository: hyperledger/besu
-    tag: 24.5.1-amd64
+  clc:
+    repository: none/none
+    tag: latest
     imagePullPolicy: Always
   hooks:
     repository: consensys/quorum-k8s-hooks
     tag: 22.04
     imagePullPolicy: Always
-    
+
 storage:
   allowVolumeExpansion: true
   volumeBindingMode: WaitForFirstConsumer
   reclaimPolicy: Delete
-  size: "1000Gi"
+  size: "250Gi"
   parameters: {}
-  ## for azure https://learn.microsoft.com/en-us/azure/aks/azure-csi-files-storage-provision
+  ## for azure https://learn.microsoft.com/en-us/azure/aks/azure-csi-disk-storage-provision
   # parameters:
   #   skuName: Premium_LRS
   #   shareAccessTier: TransactionOptimized
@@ -90,52 +82,33 @@ storage:
   #   type: gp3
   #   allowAutoIOPSPerGBIncrease: true
   #   csi.storage.k8s.io/fstype: xfs
-
+  
 jwt:
   secretPath: "/jwt"
   hostAllowlist: ["*"]
 
 settings:
-  privateKeyFilePath: "/tmp/key"
+  dataStorageMode: "minimal"
   dataPath: "/data"
-  dataStorageFormat: "BONSAI"
-  syncMode: "X_CHECKPOINT"
+  keysPath: "/tmp/key"
   logging: INFO
-  engine:
-    jwtDisabled: "false"
-    rpcEnabled: true
-    rpcPort: 8551
+  env_opts: ""
   p2p:
     enabled: true
-    addr: "0.0.0.0"
-    port: 30303
+    interface: "0.0.0.0"
+    port: 9000
+    advertisedPort: 9000
     discovery: true
-    maxPeers: 25
-  rpc:
+  restApi:
     enabled: true
+    docsEnabled: false
     host: "0.0.0.0"
-    port: 8545
-    api: ["DEBUG","ETH", "ADMIN", "WEB3", "NET", "TRACE", "TXPOOL"]
-    corsOrigins: ["all"]
-    authenticationEnabled: false
-  ws:
-    enabled: false
-    host: "0.0.0.0"
-    port: 8546
-    api: ["DEBUG","ETH", "ADMIN", "WEB3", "IBFT", "NET", "TRACE", "TXPOOL"]
-    authenticationEnabled: false
-  graphql:
-    enabled: false
-    host: "0.0.0.0"
-    port: 8547
-    corsOrigins: ["all"]
-  txPool:
-    priceBump: 10
-  http:
+    port: 5051
+    corsOrigins: ["*"]
     allowlist: ["*"]
   metrics:
     enabled: true
     host: "0.0.0.0"
-    port: 9545
-
-
+    port: 8008
+    allowlist: ["*"]
+    categories: ["BEACON", "JVM", "PROCESS", "DISCOVERY", "EVENTBUS", "EXECUTOR", "LIBP2P", "NETWORK", "STORAGE", "STORAGE_HOT_DB", "STORAGE_FINALIZED_DB", "REMOTE_VALIDATOR", "VALIDATOR", "VALIDATOR_PERFORMANCE"]

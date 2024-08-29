@@ -1,0 +1,1102 @@
+---
+# Source: ethnode/charts/clc/templates/service-account.yml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  name: jfgt-teku-mainnet-dev
+  namespace: ethereum
+---
+# Source: ethnode/charts/elc/templates/service-account.yml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    helm.sh/chart: elc-0.0.1
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  name: jfgt-geth-mainnet-dev
+  namespace: ethereum
+---
+# Source: ethnode/charts/clc/templates/teku/config.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jfgt-teku-mainnet-dev-config
+  labels:
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  namespace: ethereum
+data:
+  config.yml: |-
+
+    # network
+    network: "mainnet"
+    p2p-private-key-file: "/tmp/key" 
+    data-path: "/data"
+    data-storage-mode: "minimal"
+    logging: "INFO"
+    log-color-enabled: False
+
+    initial-state: "https://sync-mainnet.beaconcha.in/eth/v2/debug/beacon/states/finalized"
+    
+    
+    # engine
+    ee-endpoint: "http://jfgt-geth-mainnet-dev.ethereum.svc.cluster.local:8551"
+    ee-jwt-secret-file: "/jwt/jwtSecret.hex"
+
+    # interop
+    # TODO - check with Lucas if these can be hardcoded?
+    Xinterop-genesis-time: 0
+    Xinterop-owned-validator-start-index: 0
+    Xinterop-owned-validator-count: 64
+    Xinterop-number-of-validators: 64
+    Xinterop-enabled: False
+    validators-proposer-default-fee-recipient: "0x0000000000000000000000000000000000000000"
+    
+    # p2p network
+    p2p-enabled: true
+    p2p-discovery-enabled: true
+    p2p-interface: "0.0.0.0"
+    p2p-port: 9000
+    p2p-advertised-port: 9000
+    
+
+    # beacon rest api
+    rest-api-enabled: true
+    rest-api-docs-enabled: false
+    rest-api-interface: "0.0.0.0"
+    rest-api-port: 5051
+    rest-api-cors-origins: ["*"]
+    rest-api-host-allowlist: ["*"]
+    
+
+    # metrics
+    metrics-enabled: True
+    metrics-host-allowlist: ["*"]
+    metrics-categories: ["BEACON","JVM","PROCESS","DISCOVERY","EVENTBUS","EXECUTOR","LIBP2P","NETWORK","STORAGE","STORAGE_HOT_DB","STORAGE_FINALIZED_DB","REMOTE_VALIDATOR","VALIDATOR","VALIDATOR_PERFORMANCE"]
+    metrics-interface: "0.0.0.0"
+    metrics-port: 8008
+    
+
+
+  log4j.xml: |-
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Configuration status="INFO" monitorInterval="5">
+
+      <Properties>
+        <Property name="root.log.level">INFO</Property>
+      </Properties>
+
+      <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+          <PatternLayout alwaysWriteExceptions="false" pattern='{"@timestamp":"%d{ISO8601}","level":"%level","thread":"%t","class":"%c{1}","message":"%replace{%msg}{[\p{Cntrl}&amp;&amp;[^\r\n]]}{}","throwable":"%enc{%throwable}{JSON}"}%n'/>
+        </Console>
+      </Appenders>
+
+      <Loggers>
+        <Root level="${sys:root.log.level}">
+          <AppenderRef ref="Console" />
+        </Root>
+      </Loggers>
+
+    </Configuration>
+---
+# Source: ethnode/charts/clc/templates/storage.yml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: jfgt-teku-mainnet-dev-storage
+  labels:
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm  
+  namespace: ethereum
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+provisioner: disk.csi.azure.com
+parameters:
+  skuName: Premium_LRS
+---
+# Source: ethnode/charts/elc/templates/storage.yml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: jfgt-geth-mainnet-dev-storage
+  labels:
+    helm.sh/chart: elc-0.0.1
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm  
+  namespace: ethereum
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+provisioner: disk.csi.azure.com
+parameters:
+  skuName: Premium_LRS
+---
+# Source: ethnode/charts/clc/templates/storage.yml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jfgt-teku-mainnet-dev-pvc
+  labels:
+    name: jfgt-teku-mainnet-dev
+    "schedule/hourly": "enabled"
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  namespace: ethereum
+spec: 
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: jfgt-teku-mainnet-dev-storage
+  resources: 
+    requests:
+      storage: "250Gi"
+---
+# Source: ethnode/charts/elc/templates/storage.yml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jfgt-geth-mainnet-dev-pvc
+  labels:
+    name: jfgt-geth-mainnet-dev
+    "schedule/hourly": "enabled"
+    helm.sh/chart: elc-0.0.1
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  namespace: ethereum
+spec: 
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: jfgt-geth-mainnet-dev-storage
+  resources: 
+    requests:
+      storage: "1000Gi"
+---
+# Source: ethnode/charts/clc/templates/service-account.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jfgt-teku-mainnet-dev-role
+  namespace: ethereum
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get" ]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create"]
+---
+# Source: ethnode/charts/elc/templates/service-account.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jfgt-geth-mainnet-dev-role
+  namespace: ethereum
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get" ]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create"]
+---
+# Source: ethnode/charts/clc/templates/service-account.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jfgt-teku-mainnet-dev-rb
+  namespace: ethereum
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jfgt-teku-mainnet-dev-role
+subjects:
+- kind: ServiceAccount
+  namespace: ethereum
+  name: jfgt-teku-mainnet-dev
+---
+# Source: ethnode/charts/elc/templates/service-account.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jfgt-geth-mainnet-dev-rb
+  namespace: ethereum
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jfgt-geth-mainnet-dev-role
+subjects:
+- kind: ServiceAccount
+  namespace: ethereum
+  name: jfgt-geth-mainnet-dev
+---
+# Source: ethnode/charts/clc/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: jfgt-teku-mainnet-dev
+  namespace: ethereum
+  labels:
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+  ports:
+    - name: clc-libp2p
+      port: 9000
+      protocol: TCP
+      targetPort: clc-libp2p
+    - name: clc-discovery
+      port: 9000
+      protocol: UDP
+      targetPort: clc-discovery
+    - name: clc-rest
+      port: 5051
+      protocol: TCP
+      targetPort: clc-rest
+    - name: clc-metrics
+      port: 8008
+      protocol: TCP
+      targetPort: clc-metrics
+---
+# Source: ethnode/charts/elc/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: jfgt-geth-mainnet-dev
+  namespace: ethereum
+  labels:
+    helm.sh/chart: elc-0.0.1
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+  ports:
+    - name: elc-rpc
+      port: 8545
+      protocol: TCP
+      targetPort: elc-rpc
+    - name: elc-ws
+      port: 8546
+      protocol: TCP
+      targetPort: elc-ws
+    - name: elc-rlpx
+      port: 30303
+      protocol: TCP
+      targetPort: elc-rlpx
+    - name: elc-discovery
+      port: 30303
+      protocol: UDP
+      targetPort: elc-discovery
+    - name: elc-metrics
+      port: 9545
+      protocol: TCP
+      targetPort: elc-metrics
+    - name: elc-engine
+      port: 8551
+      protocol: TCP
+      targetPort: elc-engine
+---
+# Source: ethnode/charts/clc/templates/teku/statefulset.yml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jfgt-teku-mainnet-dev
+  labels:
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  namespace: ethereum
+spec:
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      helm.sh/chart: clc-0.0.1
+      app.kubernetes.io/name: teku
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/clc: teku
+      ethereum/env: dev
+      ethereum/network: mainnet
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/component: "teku"
+  serviceName: jfgt-teku-mainnet-dev
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: clc-0.0.1
+        app.kubernetes.io/name: teku
+        app.kubernetes.io/release: jfgt
+        app.kubernetes.io/namespace: ethereum
+        ethereum/clc: teku
+        ethereum/env: dev
+        ethereum/network: mainnet
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: "teku"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8008"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: jfgt-teku-mainnet-dev
+      automountServiceAccountToken: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity: 
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: workloadType
+                operator: In
+                values:
+                - ethereum
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                workloadType: ethereum
+            topologyKey: kubernetes.io/hostname
+      tolerations:
+        - effect: NoExecute
+          key: ethereum
+          value: "true"
+        - effect: NoSchedule
+          key: ethereum
+          value: "true"
+
+      initContainers:
+      - name: init
+        image: consensys/quorum-k8s-hooks:22.04
+        volumeMounts:
+          - name: clc-pip
+            mountPath: /pip
+          - name: clc-data
+            mountPath: /data
+        securityContext:
+          runAsUser: 0                        
+        command:
+        - /bin/bash
+        - -xec
+        - |
+          # get the existing public ip to associate with
+          PUBLIC_IP_TO_ASSOCIATE=$(curl ifconfig.io)
+          echo "PUBLIC_IP_TO_ASSOCIATE: $PUBLIC_IP_TO_ASSOCIATE"
+          echo -ne "$PUBLIC_IP_TO_ASSOCIATE" > /pip/ip
+
+          # update permissions on the data volume
+          chown -R 1000:1000 /data
+
+      containers:
+      - name: teku
+        image: consensys/teku:latest
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: "2"
+            memory: "8G"
+          limits:
+            cpu: "4"
+            memory: "16G"
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          # just makes this easier to read locally
+          - name: LOG4J_CONFIGURATION_FILE
+            value: /etc/teku/log4j.xml
+        volumeMounts:
+          - name: clc-pip
+            mountPath: /pip
+            readOnly: true
+          - name: teku-config-yml
+            mountPath: /etc/teku
+            readOnly: true
+          - name: clc-data
+            mountPath: /data
+          - name: clc-jwt
+            mountPath: /jwt
+            readOnly: true            
+        ports:
+          - name: clc-rest
+            containerPort: 5051
+            protocol: TCP
+          - name: clc-libp2p
+            containerPort: 9000
+            protocol: TCP
+          - name: clc-discovery
+            containerPort: 9000
+            protocol: UDP
+          - name: clc-metrics
+            containerPort: 8008
+            protocol: TCP
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - |
+            pip=$(cat /pip/ip)
+            /opt/teku/bin/teku \
+              --config-file=/etc/teku/config.yml \
+              --p2p-advertised-ip=${pip}
+        livenessProbe:
+          httpGet:
+            path: "/teku/v1/admin/liveness"
+            port: 5051
+          initialDelaySeconds: 120
+          periodSeconds: 30
+      
+      volumes:
+      - name: teku-config-yml
+        configMap:
+          name: jfgt-teku-mainnet-dev-config
+      - name: clc-jwt
+        secret:
+          secretName: jfgt-ethnode-mainnet-dev-jwt         
+      - name: clc-pip
+        emptyDir: {}
+      - name: clc-data
+        persistentVolumeClaim:
+          claimName: jfgt-teku-mainnet-dev-pvc
+---
+# Source: ethnode/charts/elc/templates/geth/statefulset.yml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jfgt-geth-mainnet-dev
+  labels:
+    helm.sh/chart: elc-0.0.1
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  namespace: ethereum
+spec:
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      helm.sh/chart: elc-0.0.1
+      app.kubernetes.io/name: geth
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/elc: geth
+      ethereum/env: dev
+      ethereum/network: mainnet
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/component: geth
+  serviceName: jfgt-geth-mainnet-dev
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: elc-0.0.1
+        app.kubernetes.io/name: geth
+        app.kubernetes.io/release: jfgt
+        app.kubernetes.io/namespace: ethereum
+        ethereum/elc: geth
+        ethereum/env: dev
+        ethereum/network: mainnet
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: geth
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9545"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: jfgt-geth-mainnet-dev
+      automountServiceAccountToken: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity: 
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: workloadType
+                operator: In
+                values:
+                - ethereum
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                workloadType: ethereum
+            topologyKey: kubernetes.io/hostname
+      tolerations: 
+        - effect: NoExecute
+          key: ethereum
+          value: "true"
+        - effect: NoSchedule
+          key: ethereum
+          value: "true"
+
+      initContainers:
+      - name: init
+        image: consensys/quorum-k8s-hooks:22.04
+        volumeMounts:
+          - name: elc-pip
+            mountPath: /pip
+          - name: elc-data
+            mountPath: /data
+        securityContext:
+          runAsUser: 0                        
+        command:
+        - /bin/bash
+        - -xec
+        - |
+          # get the existing public ip to associate with
+          PUBLIC_IP_TO_ASSOCIATE=$(curl ifconfig.io)
+          echo "PUBLIC_IP_TO_ASSOCIATE: $PUBLIC_IP_TO_ASSOCIATE"
+          echo -ne "$PUBLIC_IP_TO_ASSOCIATE" > /pip/ip
+          
+          # update permissions on the data volume
+          chown -R 1000:1000 /data
+
+      containers:
+      - name: geth
+        image: ethereum/client-go:latest
+        imagePullPolicy: 
+        resources:
+          requests:
+            cpu: "2"
+            memory: "8G"
+          limits:
+            cpu: "4"
+            memory: "16G"
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        volumeMounts:
+          - name: elc-pip
+            mountPath: /pip
+            readOnly: true
+          - name: elc-data
+            mountPath: /data
+          - name: elc-jwt
+            mountPath: /jwt
+            readOnly: true            
+        ports:
+          - name: elc-rpc
+            containerPort: 8545
+            protocol: TCP
+          - name: elc-ws
+            containerPort: 8546
+            protocol: TCP
+          - name: elc-rlpx
+            containerPort: 30303
+            protocol: TCP
+          - name: elc-discovery
+            containerPort: 30303
+            protocol: UDP
+          - name: elc-metrics
+            containerPort: 9545
+            protocol: TCP
+          - name: elc-engine
+            containerPort: 8551
+            protocol: TCP  
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - |
+            exec
+
+            pip=$(cat /pip/ip)
+
+            /usr/local/bin/geth \
+              --mainnet \
+              --verbosity=3 \
+              --nat extip:${pip} \
+              --log.format=json \
+              --db.engine=leveldb \
+              --state.scheme=hash \
+              --cache=1024 \
+              --cache.blocklogs=32 \
+              --snapshot=true \
+              --gcmode=archive \
+              --syncmode=snap \
+              --datadir=/data \
+              --port=30303 \
+              --authrpc.jwtsecret="/jwt/jwtSecret.hex" \
+              --authrpc.port=8551 \
+              --authrpc.vhosts="*" \
+              --http \
+              --http.rpcprefix=/ \
+              --http.addr="0.0.0.0" \
+              --http.port=8545 \
+              --http.corsdomain="*" \
+              --http.vhosts="*" \
+              --http.api="DEBUG,ETH,ADMIN,WEB3,NET,TRACE,TXPOOL" \
+              --ws.rpcprefix=/ \
+              --ws.addr="0.0.0.0" \
+              --ws.port=8546 \
+              --ws.origins="*" \
+              --ws.api="DEBUG,ETH,ADMIN,WEB3,IBFT,NET,TRACE,TXPOOL" \
+              --metrics \
+              --pprof \
+              --pprof.addr="0.0.0.0" \
+              --pprof.port=9545
+
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: 8545
+            httpHeaders:
+              - name:  Content-Type
+                value: application/json            
+          initialDelaySeconds: 120
+          periodSeconds: 30
+      
+      volumes:
+      - name: elc-jwt
+        secret:
+          secretName: jfgt-ethnode-mainnet-dev-jwt         
+      - name: elc-pip
+        emptyDir: {}
+      - name: elc-data
+        persistentVolumeClaim:
+          claimName: jfgt-geth-mainnet-dev-pvc
+---
+# Source: ethnode/charts/clc/templates/service.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jfgt-teku-mainnet-dev-servicemonitor
+  namespace: ethereum
+  labels:
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+spec:
+  namespaceSelector:
+    matchNames:
+    - ethereum
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: teku
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/clc: teku
+      ethereum/env: dev
+      ethereum/network: mainnet      
+  endpoints:
+  - port: clc-metrics
+    interval: 15s
+    path: /metrics
+    scheme: http
+    honorLabels: true
+---
+# Source: ethnode/charts/elc/templates/service.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jfgt-geth-mainnet-dev-servicemonitor
+  namespace: ethereum
+  labels:
+    helm.sh/chart: elc-0.0.1
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+spec:
+  namespaceSelector:
+    matchNames:
+    - ethereum
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: geth
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/elc: geth
+      ethereum/env: dev
+      ethereum/network: mainnet      
+  endpoints:
+  - port: elc-metrics
+    interval: 15s
+    path: /metrics
+    scheme: http
+    honorLabels: true
+---
+# Source: ethnode/charts/clc/templates/storage.yml
+apiVersion: snapscheduler.backube/v1
+kind: SnapshotSchedule
+metadata:
+  name:  jfgt-teku-mainnet-dev-vss
+  namespace: ethereum
+spec:
+  claimSelector:
+    matchLabels:
+      name: jfgt-teku-mainnet-dev
+      "schedule/hourly": "enabled"
+      helm.sh/chart: clc-0.0.1
+      app.kubernetes.io/name: teku
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/clc: teku
+      ethereum/env: dev
+      ethereum/network: mainnet
+      app.kubernetes.io/managed-by: Helm      
+  schedule: "@hourly"
+  retention:
+    # retained specified in hours. (168h = 1 week)
+    expires: "168h"
+    maxCount: 10  # optional
+  # set of labels can be added to each VolumeSnapshot object
+  snapshotTemplate:
+    labels:  
+      name: jfgt-teku-mainnet-dev
+      helm.sh/chart: clc-0.0.1
+      app.kubernetes.io/name: teku
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/clc: teku
+      ethereum/env: dev
+      ethereum/network: mainnet
+      app.kubernetes.io/managed-by: Helm  
+    snapshotClassName: jfgt-teku-mainnet-dev-vsc
+---
+# Source: ethnode/charts/elc/templates/storage.yml
+apiVersion: snapscheduler.backube/v1
+kind: SnapshotSchedule
+metadata:
+  name:  jfgt-geth-mainnet-dev-vss
+  namespace: ethereum
+spec:
+  claimSelector:
+    matchLabels:
+      name: jfgt-geth-mainnet-dev
+      "schedule/hourly": "enabled"
+      helm.sh/chart: elc-0.0.1
+      app.kubernetes.io/name: geth
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/elc: geth
+      ethereum/env: dev
+      ethereum/network: mainnet
+      app.kubernetes.io/managed-by: Helm      
+  schedule: "@hourly"
+  retention:
+    # retained specified in hours. (168h = 1 week)
+    expires: "168h"
+    maxCount: 10  # optional
+  # set of labels can be added to each VolumeSnapshot object
+  snapshotTemplate:
+    labels:  
+      name: jfgt-geth-mainnet-dev
+      helm.sh/chart: elc-0.0.1
+      app.kubernetes.io/name: geth
+      app.kubernetes.io/release: jfgt
+      app.kubernetes.io/namespace: ethereum
+      ethereum/elc: geth
+      ethereum/env: dev
+      ethereum/network: mainnet
+      app.kubernetes.io/managed-by: Helm  
+    snapshotClassName: jfgt-geth-mainnet-dev-vsc
+---
+# Source: ethnode/charts/clc/templates/storage.yml
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: jfgt-teku-mainnet-dev-vsc
+  labels:
+    helm.sh/chart: clc-0.0.1
+    app.kubernetes.io/name: teku
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/clc: teku
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm  
+  namespace: ethereum
+deletionPolicy: Delete
+driver: disk.csi.azure.com
+---
+# Source: ethnode/charts/elc/templates/storage.yml
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: jfgt-geth-mainnet-dev-vsc
+  labels:
+    helm.sh/chart: elc-0.0.1
+    app.kubernetes.io/name: geth
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/elc: geth
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm  
+  namespace: ethereum
+deletionPolicy: Delete
+driver: disk.csi.azure.com
+---
+# Source: ethnode/templates/jwt-hooks-sa.yml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    helm.sh/chart: ethnode-0.1.0
+    app.kubernetes.io/name: ethnode
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook": "pre-install,pre-delete,post-delete"    
+  name: jfgt-ethnode-mainnet-dev-hooks
+  namespace: ethereum
+---
+# Source: ethnode/templates/jwt-hooks-sa.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jfgt-ethnode-hooks-role
+  namespace: ethereum
+  annotations:
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook": "pre-install,pre-delete,post-delete"  
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "get", "list", "update", "delete", "patch" ]
+---
+# Source: ethnode/templates/jwt-hooks-sa.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jfgt-ethnode-hooks-rb
+  namespace: ethereum
+  annotations:
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook": "pre-install,pre-delete,post-delete"  
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jfgt-ethnode-hooks-role
+subjects:
+- kind: ServiceAccount
+  namespace: ethereum
+  name: jfgt-ethnode-mainnet-dev-hooks
+---
+# Source: ethnode/templates/jwt-hooks-post-delete.yml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jfgt-ethnode-mainnet-dev-post-delete-hook
+  namespace: ethereum
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": "hook-succeeded"
+  labels:
+    app.kubernetes.io/name: post-delete-hook
+    app.kubernetes.io/component: job
+    helm.sh/chart: ethnode-0.1.0
+    app.kubernetes.io/name: ethnode
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+spec:
+  backoffLimit: 1
+  completions: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: post-delete-hook
+        app.kubernetes.io/component: job
+        app.kubernetes.io/release: jfgt
+    spec:
+      serviceAccountName: jfgt-ethnode-mainnet-dev-hooks
+      restartPolicy: "OnFailure"
+      containers:
+        - name: post-delete-hook
+          image: consensys/quorum-k8s-hooks:22.04
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 0
+          command:
+            - /bin/bash
+            - -c
+          args:
+            - |
+
+              echo "jfgt-ethnode-mainnet-dev post-delete hook ..."
+
+              echo "create jwt secret ..."
+              rm /tmp/jwtSecret.hex
+              openssl rand -hex 32 | tr -d "\n" > /tmp/jwtSecret.hex
+
+              # create a secret if it doesn't already exist
+              kubectl get secret jfgt-ethnode-mainnet-dev-jwt --namespace ethereum -o json > /dev/null 2>&1
+              if [ $? -ne 0 ]; then
+                kubectl create secret generic jfgt-ethnode-mainnet-dev-jwt --namespace ethereum --from-file=jwtSecret.hex=/tmp/jwtSecret.hex 
+              fi
+
+              echo "jfgt-ethnode post-delete hook completed"
+---
+# Source: ethnode/templates/jwt-hooks-pre-install.yml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jfgt-ethnode-mainnet-dev-pre-install-hook
+  namespace: ethereum
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": "hook-succeeded"
+  labels:
+    app.kubernetes.io/name: pre-install-hook
+    app.kubernetes.io/component: job
+    helm.sh/chart: ethnode-0.1.0
+    app.kubernetes.io/name: ethnode
+    app.kubernetes.io/release: jfgt
+    app.kubernetes.io/namespace: ethereum
+    ethereum/env: dev
+    ethereum/network: mainnet
+    app.kubernetes.io/managed-by: Helm
+spec:
+  backoffLimit: 1
+  completions: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pre-install-hook
+        app.kubernetes.io/component: job
+        app.kubernetes.io/release: jfgt
+    spec:
+      serviceAccountName: jfgt-ethnode-mainnet-dev-hooks
+      restartPolicy: "OnFailure"
+      containers:
+        - name: pre-install-hook
+          image: consensys/quorum-k8s-hooks:22.04
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 0
+          command:
+            - /bin/bash
+            - -c
+          args:
+            - |
+
+              echo "jfgt-ethnode pre-install hook ..."
+
+              echo "create jwt secret ..."
+              rm /tmp/jwtSecret.hex
+              openssl rand -hex 32 | tr -d "\n" > /tmp/jwtSecret.hex
+
+              # create a secret if it doesn't already exist
+              kubectl get secret jfgt-ethnode-mainnet-dev-jwt --namespace ethereum -o json > /dev/null 2>&1
+              if [ $? -ne 0 ]; then
+                kubectl create secret generic jfgt-ethnode-mainnet-dev-jwt --namespace ethereum --from-file=jwtSecret.hex=/tmp/jwtSecret.hex 
+              fi
+
+              echo "jfgt-ethnode pre-install hook completed"

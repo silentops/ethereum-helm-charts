@@ -2,8 +2,8 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "ethnode.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- define "ethnode-elc.name" -}}
+{{- default .Values.global.elc .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -11,11 +11,11 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "ethnode.fullname" -}}
+{{- define "ethnode-elc.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- $name := default .Values.global.elc .Values.nameOverride }}
 {{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -27,16 +27,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "ethnode.chart" -}}
+{{- define "ethnode-elc.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create the name of the service account
 */}}
-{{- define "ethnode.serviceAccountName" -}}
+{{- define "ethnode-elc.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "ethnode.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "ethnode-elc.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -45,7 +45,7 @@ Create the name of the service account
 {{/*
 Allow the release namespace to be overridden for multi-namespace deployments in combined charts
 */}}
-{{- define "ethnode.namespace" -}}
+{{- define "ethnode-elc.namespace" -}}
 {{- if .Values.namespaceOverride }}
 {{- .Values.namespaceOverride }}
 {{- else }}
@@ -56,11 +56,11 @@ Allow the release namespace to be overridden for multi-namespace deployments in 
 {{/*
 Common labels
 */}}
-{{- define "ethnode.labels" -}}
-helm.sh/chart: {{ include "ethnode.chart" . }}
-{{ include "ethnode.selectorLabels" . }}
+{{- define "ethnode-elc.labels" -}}
+helm.sh/chart: {{ include "ethnode-elc.chart" . }}
+{{ include "ethnode-elc.selectorLabels" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- with .Values.ptcs.extraLabels }}
+{{- with .Values.extraLabels }}
 {{ toYaml . }}
 {{- end }}
 {{- end }}
@@ -68,10 +68,11 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "ethnode.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "ethnode.name" . }}
+{{- define "ethnode-elc.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ethnode-elc.name" . }}
 app.kubernetes.io/release: {{ .Release.Name }}
 app.kubernetes.io/namespace: {{ .Release.Namespace }}
+ethereum/elc: {{ .Values.global.elc }}
 ethereum/env: {{ .Values.global.env }}
 ethereum/network: {{ .Values.global.network }}
 {{- end }}
@@ -79,7 +80,7 @@ ethereum/network: {{ .Values.global.network }}
 {{/*
 Return the appropriate apiVersion for rbac.
 */}}
-{{- define "ethnode.rbac.apiVersion" -}}
+{{- define "ethnode-elc.rbac.apiVersion" -}}
 {{- if $.Capabilities.APIVersions.Has "rbac.authorization.k8s.io/v1" }}
 {{- print "rbac.authorization.k8s.io/v1" }}
 {{- else }}
@@ -90,7 +91,7 @@ Return the appropriate apiVersion for rbac.
 {{/*
 Return the appropriate apiVersion for ingress.
 */}}
-{{- define "ethnode.ingress.apiVersion" -}}
+{{- define "ethnode-elc.ingress.apiVersion" -}}
 {{- if and ($.Capabilities.APIVersions.Has "networking.k8s.io/v1") (semverCompare ">= 1.19-0" .Capabilities.KubeVersion.Version) }}
 {{- print "networking.k8s.io/v1" }}
 {{- else if $.Capabilities.APIVersions.Has "networking.k8s.io/v1beta1" }}
@@ -103,7 +104,7 @@ Return the appropriate apiVersion for ingress.
 {{/*
 Return the appropriate apiVersion for Horizontal Pod Autoscaler.
 */}}
-{{- define "ethnode.hpa.apiVersion" -}}
+{{- define "ethnode-elc.hpa.apiVersion" -}}
 {{- if $.Capabilities.APIVersions.Has "autoscaling/v2/HorizontalPodAutoscaler" }}
 {{- print "autoscaling/v2" }}
 {{- else if $.Capabilities.APIVersions.Has "autoscaling/v2beta2/HorizontalPodAutoscaler" }}
@@ -116,7 +117,7 @@ Return the appropriate apiVersion for Horizontal Pod Autoscaler.
 {{/*
 Return the appropriate apiVersion for podDisruptionBudget.
 */}}
-{{- define "ethnode.podDisruptionBudget.apiVersion" -}}
+{{- define "ethnode-elc.podDisruptionBudget.apiVersion" -}}
 {{- if $.Capabilities.APIVersions.Has "policy/v1/PodDisruptionBudget" }}
 {{- print "policy/v1" }}
 {{- else }}
@@ -127,28 +128,28 @@ Return the appropriate apiVersion for podDisruptionBudget.
 {{/*
 Return if ingress is stable.
 */}}
-{{- define "ethnode.ingress.isStable" -}}
-{{- eq (include "ethnode.ingress.apiVersion" .) "networking.k8s.io/v1" }}
+{{- define "ethnode-elc.ingress.isStable" -}}
+{{- eq (include "ethnode-elc.ingress.apiVersion" .) "networking.k8s.io/v1" }}
 {{- end }}
 
 {{/*
 Return if ingress supports ingressClassName.
 */}}
-{{- define "ethnode.ingress.supportsIngressClassName" -}}
-{{- or (eq (include "ethnode.ingress.isStable" .) "true") (and (eq (include "ethnode.ingress.apiVersion" .) "networking.k8s.io/v1beta1") (semverCompare ">= 1.18-0" .Capabilities.KubeVersion.Version)) }}
+{{- define "ethnode-elc.ingress.supportsIngressClassName" -}}
+{{- or (eq (include "ethnode-elc.ingress.isStable" .) "true") (and (eq (include "ethnode-elc.ingress.apiVersion" .) "networking.k8s.io/v1beta1") (semverCompare ">= 1.18-0" .Capabilities.KubeVersion.Version)) }}
 {{- end }}
 
 {{/*
 Return if ingress supports pathType.
 */}}
-{{- define "ethnode.ingress.supportsPathType" -}}
-{{- or (eq (include "ethnode.ingress.isStable" .) "true") (and (eq (include "ethnode.ingress.apiVersion" .) "networking.k8s.io/v1beta1") (semverCompare ">= 1.18-0" .Capabilities.KubeVersion.Version)) }}
+{{- define "ethnode-elc.ingress.supportsPathType" -}}
+{{- or (eq (include "ethnode-elc.ingress.isStable" .) "true") (and (eq (include "ethnode-elc.ingress.apiVersion" .) "networking.k8s.io/v1beta1") (semverCompare ">= 1.18-0" .Capabilities.KubeVersion.Version)) }}
 {{- end }}
 
 {{/*
 Formats imagePullSecrets. Input is (dict "root" . "imagePullSecrets" .{specific imagePullSecrets})
 */}}
-{{- define "ethnode.imagePullSecrets" -}}
+{{- define "ethnode-elc.imagePullSecrets" -}}
 {{- $root := .root }}
 {{- range (concat .root.Values.global.imagePullSecrets .imagePullSecrets) }}
 {{- if eq (typeOf .) "map[string]interface {}" }}

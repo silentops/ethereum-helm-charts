@@ -1,13 +1,12 @@
-{{ if eq .Values.global.elc "besu" -}}
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-{{ .Values.global.elc }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+  name: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
   namespace: {{ include "ethnode.namespace" . }}
   labels:
-    {{- include "ethnode.labels" $ | nindent 4 }}
+    {{- include "ethnode-elc.labels" $ | nindent 4 }}
     {{- with .Values.service.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -20,7 +19,7 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   selector:
-    {{- include "ethnode.selectorLabels" . | nindent 4 }}
+    {{- include "ethnode-elc.selectorLabels" . | nindent 4 }}
   {{- with .Values.service }}
   ports:
     {{- toYaml .ports | nindent 4 }}
@@ -31,10 +30,10 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ .Release.Name }}-{{ .Values.global.elc }}-{{ .Values.global.network }}-{{ .Values.global.env }}-servicemonitor
+  name: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-servicemonitor
   namespace: {{ include "ethnode.namespace" . }}
   labels:
-    {{- include "ethnode.labels" $ | nindent 4 }}
+    {{- include "ethnode-elc.labels" $ | nindent 4 }}
     {{- with .Values.service.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -44,13 +43,10 @@ spec:
     - {{ include "ethnode.namespace" . }}
   selector:
     matchLabels:  
-    {{- include "ethnode.selectorLabels" . | nindent 6 }}      
+    {{- include "ethnode-elc.selectorLabels" . | nindent 6 }}      
   endpoints:
   - port: elc-metrics
     interval: 15s
     path: /metrics
     scheme: http
     honorLabels: true
-
-
-{{- end }}
