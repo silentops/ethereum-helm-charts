@@ -136,8 +136,45 @@ spec:
             pip=$(cat /pip/ip)
 
             /opt/besu/bin/besu \
-              --config-file=/etc/besu/config.toml \
-              --p2p-host=${pip}
+              --data-path={{ .Values.settings.dataPath | quote }} \
+              --network={{ .Values.global.network | quote }} \
+              --logging={{ .Values.settings.logging | quote }} \
+              --node-private-key-file={{.Values.settings.privateKeyFilePath | quote }} \
+              --min-gas-price=1000 \
+              --tx-pool-price-bump={{ .Values.settings.txPool.priceBump }} \
+              --data-storage-format={{ .Values.settings.dataStorageFormat | quote }} \
+              --sync-mode={{ .Values.settings.syncMode | quote }} \
+              --Xdns-enabled=true \
+              --Xdns-update-enabled=true \
+              --nat-method="NONE" \
+              --Xsnapsync-synchronizer-flat-db-healing-enabled=true \
+              --p2p-enabled=true \
+              --p2p-host=${pip} \
+              --p2p-port={{ .Values.settings.p2p.port }} \
+              --discovery-enabled={{ .Values.settings.p2p.discovery }} \
+              --max-peers={{ .Values.settings.p2p.maxPeers }} \
+              --engine-jwt-disabled={{ .Values.settings.engine.jwtDisabled }} \
+              --engine-jwt-secret="{{ .Values.global.jwt.secretPath }}/jwtSecret.hex" \
+              --engine-rpc-enabled={{ .Values.settings.engine.rpcEnabled }} \
+              --engine-rpc-port={{ .Values.settings.engine.rpcPort }} \
+              --engine-host-allowlist={{ join "," .Values.global.jwt.hostAllowlist }} \
+              --host-allowlist={{ join "," .Values.settings.http.allowlist }} \
+              --rpc-http-enabled={{ .Values.settings.rpc.enabled }} \
+              --rpc-http-host={{ .Values.settings.rpc.host | quote }} \
+              --rpc-http-port={{ .Values.settings.rpc.port }} \
+              --rpc-http-api={{ join "," .Values.settings.rpc.api }} \
+              --rpc-http-cors-origins={{ join "," .Values.settings.rpc.corsOrigins }} \
+              --rpc-http-authentication-enabled={{ .Values.settings.rpc.authenticationEnabled }} \
+              --revert-reason-enabled=true \
+              --rpc-ws-enabled={{ .Values.settings.ws.enabled }} \
+              --rpc-ws-host={{ .Values.settings.ws.host | quote }} \
+              --rpc-ws-port={{ .Values.settings.ws.port }} \
+              --rpc-ws-api={{ join "," .Values.settings.ws.api }} \
+              --rpc-ws-authentication-enabled={{ .Values.settings.ws.authenticationEnabled }} \
+              --metrics-enabled=true \
+              --metrics-host={{ .Values.settings.metrics.host | quote }} \
+              --metrics-port={{ .Values.settings.metrics.port }} 
+
         livenessProbe:
           httpGet:
             path: "/liveness"

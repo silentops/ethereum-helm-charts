@@ -129,8 +129,39 @@ spec:
 
             pip=$(cat /pip/ip)
             /opt/teku/bin/teku \
-              --config-file=/etc/teku/config.yml \
-              --p2p-advertised-ip=${pip}
+              --network={{ .Values.global.network | quote }} \
+              --data-path={{ .Values.settings.dataPath | quote }} \
+              --data-storage-mode={{ .Values.settings.dataStorageMode | quote }} \
+              --logging={{ .Values.settings.logging | quote }} \
+              --log-color-enabled=false \
+              {{ if eq .Values.global.network "mainnet" -}} --initial-state="https://sync-{{ .Values.global.network }}.beaconcha.in/eth/v2/debug/beacon/states/finalized" \{{ else -}} --initial-state="https://checkpoint-sync.{{ .Values.global.network }}.ethpandaops.io/eth/v2/debug/beacon/states/finalized" \{{ end }}
+              --ee-endpoint="http://{{ .Release.Name }}-{{ .Values.global.elc }}-{{ .Values.global.network }}-{{ .Values.global.env }}.{{ include "ethnode.namespace" . }}.svc.cluster.local:8551" \
+              --ee-jwt-secret-file="{{ .Values.global.jwt.secretPath }}/jwtSecret.hex" \
+              --Xinterop-genesis-time=0 \
+              --Xinterop-owned-validator-start-index=0 \
+              --Xinterop-owned-validator-count=64 \
+              --Xinterop-number-of-validators=64 \
+              --Xinterop-enabled=false \
+              --validators-proposer-default-fee-recipient="0x0000000000000000000000000000000000000000" \
+              --p2p-enabled={{ .Values.settings.p2p.enabled }} \
+              --p2p-discovery-enabled={{ .Values.settings.p2p.discovery }} \
+              --p2p-interface={{ .Values.settings.p2p.interface | quote }} \
+              --p2p-port={{ .Values.settings.p2p.port }} \
+              --p2p-advertised-ip=${pip} \
+              --p2p-advertised-port={{ .Values.settings.p2p.advertisedPort }} \
+              --p2p-private-key-file={{ .Values.settings.keysPath | quote }} \
+              --rest-api-enabled={{ .Values.settings.restApi.enabled }} \
+              --rest-api-docs-enabled={{ .Values.settings.restApi.docsEnabled }} \
+              --rest-api-interface={{ .Values.settings.restApi.host | quote }} \
+              --rest-api-port={{ .Values.settings.restApi.port }} \
+              --rest-api-cors-origins={{ join "," .Values.settings.restApi.corsOrigins }} \
+              --rest-api-host-allowlist={{ join "," .Values.settings.restApi.allowlist  }} \
+              --metrics-enabled=true \
+              --metrics-host-allowlist={{ join "," .Values.settings.metrics.allowlist  }} \
+              --metrics-categories={{ join "," .Values.settings.metrics.categories }} \
+              --metrics-interface={{ .Values.settings.metrics.host | quote }} \
+              --metrics-port={{ .Values.settings.metrics.port }}
+
         livenessProbe:
           httpGet:
             path: "/teku/v1/admin/liveness"
