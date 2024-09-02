@@ -17,17 +17,25 @@ Ethereum Helm charts for Kubernetes - select your choice of `elc` and `clc` clie
 ### Test the charts:
 local
 ```
-helm template jl ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-local.yaml > /tmp/besu-teku-mainnet-local.yml
+helm template jf ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-local.yaml > ./artifacts/besu-teku-mainnet-local.yml
 ```
 aws
 ```
-helm template jw ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-aws.yaml > /tmp/besu-teku-mainnet-aws.yml
+helm template jw ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-aws.yaml >./artifacts/besu-teku-mainnet-aws.yml
 ```
 azure
 ```
-helm template jz ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-azure.yaml > /tmp/besu-teku-mainnet-azure.yml
+helm template jfbt ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-azure.yaml > ./artifacts/besu-teku-mainnet-azure.yml
+
+helm template jfgt ./ --namespace ethereum --create-namespace --values ./examples/mainnet/geth-teku-azure.yaml > ./artifacts/geth-teku-mainnet-azure.yml
+
+helm template jfnt ./ --namespace ethereum --create-namespace --values ./examples/mainnet/nethermind-teku-azure.yaml > ./artifacts/nethermind-teku-mainnet-azure.yml
+
 ```
 
 ## TODO
+- fixme: storage class for local deployment?
 - support for validators + w3s
 - add on other clients
+
+

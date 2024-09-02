@@ -1,0 +1,185 @@
+{{ if eq .Values.global.elc "geth" -}}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+  labels:
+    {{- include "ethnode-elc.labels" . | nindent 4 }}
+  namespace: {{ include "ethnode.namespace" . }}
+spec:
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "ethnode-elc.labels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Values.global.elc }}
+  serviceName: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+  template:
+    metadata:
+      labels:
+        {{- include "ethnode-elc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Values.global.elc }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.settings.metrics.port | quote}}
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.autoMount }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- with .Values.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if or .Values.image.pullSecrets .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- include "ethnode-elc.imagePullSecrets" . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+      - name: init
+        image: {{ .Values.image.hooks.repository }}:{{ .Values.image.hooks.tag }}
+        volumeMounts:
+          - name: elc-pip
+            mountPath: /pip
+          - name: elc-data
+            mountPath: {{ .Values.settings.dataPath }}
+        securityContext:
+          runAsUser: 0                        
+        command:
+        - /bin/bash
+        - -xec
+        - |
+          # get the existing public ip to associate with
+          PUBLIC_IP_TO_ASSOCIATE=$(curl ifconfig.io)
+          echo "PUBLIC_IP_TO_ASSOCIATE: $PUBLIC_IP_TO_ASSOCIATE"
+          echo -ne "$PUBLIC_IP_TO_ASSOCIATE" > /pip/ip
+          
+          # update permissions on the data volume
+          chown -R 1000:1000 {{ .Values.settings.dataPath }}
+
+      containers:
+      - name: geth
+        image: {{ .Values.image.elc.repository }}:{{ .Values.image.elc.tag }}
+        imagePullPolicy: {{ .Values.image.elc.imagePullPolicy }}
+        resources:
+          requests:
+            cpu: "{{ .Values.resources.cpuRequest }}"
+            memory: "{{ .Values.resources.memRequest }}"
+          limits:
+            cpu: "{{ .Values.resources.cpuLimit }}"
+            memory: "{{ .Values.resources.memLimit }}"
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        volumeMounts:
+          - name: elc-pip
+            mountPath: /pip
+            readOnly: true
+          - name: elc-data
+            mountPath: {{ .Values.settings.dataPath }}
+          - name: elc-jwt
+            mountPath: {{ .Values.global.jwt.secretPath }}
+            readOnly: true            
+        ports:
+          - name: elc-rpc
+            containerPort: {{ .Values.settings.rpc.port }}
+            protocol: TCP
+          - name: elc-ws
+            containerPort: {{ .Values.settings.ws.port }}
+            protocol: TCP
+          - name: elc-rlpx
+            containerPort: {{ .Values.settings.p2p.port }}
+            protocol: TCP
+          - name: elc-discovery
+            containerPort: {{ .Values.settings.p2p.port }}
+            protocol: UDP
+          - name: elc-metrics
+            containerPort: {{ .Values.settings.metrics.port }}
+            protocol: TCP
+          - name: elc-engine
+            containerPort: {{ .Values.settings.engine.rpcPort }}
+            protocol: TCP  
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - |
+            exec
+
+            pip=$(cat /pip/ip)
+
+            /usr/local/bin/geth \
+              --{{ .Values.global.network }} \
+              --verbosity={{ .Values.settings.logging }} \
+              --nat extip:${pip} \
+              --log.format=json \
+              --db.engine=leveldb \
+              --state.scheme=hash \
+              --cache=1024 \
+              --cache.blocklogs=32 \
+              --snapshot=true \
+              --gcmode=archive \
+              --syncmode={{ .Values.settings.syncMode }} \
+              --datadir={{ .Values.settings.dataPath }} \
+              --port={{ .Values.settings.p2p.port }} \
+              --authrpc.jwtsecret="{{ .Values.global.jwt.secretPath }}/jwtSecret.hex" \
+              --authrpc.port={{ .Values.settings.engine.rpcPort }} \
+              --authrpc.vhosts={{ join "," .Values.global.jwt.hostAllowlist | quote }} \
+              --http \
+              --http.rpcprefix=/ \
+              --http.addr={{ .Values.settings.rpc.host | quote }} \
+              --http.port={{ .Values.settings.rpc.port }} \
+              --http.corsdomain={{ join "," .Values.settings.rpc.corsOrigins | quote }} \
+              --http.vhosts={{ join "," .Values.settings.rpc.vHosts | quote }} \
+              --http.api={{ join "," .Values.settings.rpc.api | quote }} \
+              {{ if  .Values.settings.ws.enabled -}} --ws \ {{ end -}} 
+              --ws.rpcprefix=/ \
+              --ws.addr={{ .Values.settings.ws.host | quote }} \
+              --ws.port={{ .Values.settings.ws.port }} \
+              --ws.origins={{ join "," .Values.settings.rpc.corsOrigins | quote }} \
+              --ws.api={{ join "," .Values.settings.ws.api | quote }} \
+              --metrics \
+              --pprof \
+              --pprof.addr={{ .Values.settings.metrics.host | quote }} \
+              --pprof.port={{ .Values.settings.metrics.port }}
+
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: {{ .Values.settings.rpc.port }}
+            httpHeaders:
+              - name:  Content-Type
+                value: application/json            
+          initialDelaySeconds: 120
+          periodSeconds: 30
+      
+      volumes:
+      - name: elc-jwt
+        secret:
+          secretName: {{ .Release.Name }}-ethnode-{{ .Values.global.network }}-{{ .Values.global.env }}-jwt         
+      - name: elc-pip
+        emptyDir: {}
+      - name: elc-data
+        persistentVolumeClaim:
+          claimName: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-pvc
+
+{{- end }}
+

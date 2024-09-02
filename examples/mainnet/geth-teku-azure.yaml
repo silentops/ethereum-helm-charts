@@ -1,31 +1,41 @@
-nameOverride: ""
-fullnameOverride: ""
-
-# pass values to subcharts
+---
 global:
-  provider: local  # choose from: local | aws | azure
-  network: sepolia
+  provider: azure
   env: dev
-  elc: besu
+  network: mainnet
+  elc: geth
   clc: teku
-  jwt:
-    secretPath: "/jwt"
-    hostAllowlist: ["*"]  
   snapshot:
     # sot (source of truth) node, ie this is what we will create snapshots of
-    sot: false
+    sot: true
     # use the defaults of hourly, daily, weekly
-    schedule: "@weekly"
+    schedule: "@hourly"
 
-
-
-
-besu:
+elc:
+  image:
+    elc:
+      repository: ethereum/client-go
+      tag: latest
+  settings:
+    logging: 3
+    syncMode: snap
   restore:
     enabled: false
-    # restore from a particular volumesnapshot
     snapshot: ""
-
+  storage:
+    allowVolumeExpansion: true
+    volumeBindingMode: WaitForFirstConsumer
+    reclaimPolicy: Delete
+    size: "1000Gi"
+    parameters:
+      skuName: Premium_LRS
+  tolerations:
+    - key: ethereum
+      value: "true"
+      effect: NoExecute
+    - key: ethereum
+      value: "true"
+      effect: NoSchedule
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -37,23 +47,33 @@ besu:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          - key: ng
+          - key: workloadType
             operator: In
             values:
             - ethereum
 
-  tolerations:
-    - key: ethereum
-      operator: Equal
-      value: "true"
-      effect: NoExecute
-
-teku:
+clc:
+  image:
+    clc:
+      repository: consensys/teku
+      tag: latest
   restore:
     enabled: false
-    # restore from a particular volumesnapshot
     snapshot: ""
-
+  storage:
+    allowVolumeExpansion: true
+    volumeBindingMode: WaitForFirstConsumer
+    reclaimPolicy: Delete
+    size: "250Gi"
+    parameters:
+      skuName: Premium_LRS
+  tolerations:
+    - key: ethereum
+      value: "true"
+      effect: NoExecute
+    - key: ethereum
+      value: "true"
+      effect: NoSchedule
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -65,13 +85,7 @@ teku:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          - key: ng
+          - key: workloadType
             operator: In
             values:
-            - ethereum
-
-  tolerations:
-    - key: ethereum
-      operator: Equal
-      value: "true"
-      effect: NoExecute
+            - ethereum      

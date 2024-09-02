@@ -1,0 +1,175 @@
+{{ if eq .Values.global.elc "nethermind" -}}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+  labels:
+    {{- include "ethnode-elc.labels" . | nindent 4 }}
+  namespace: {{ include "ethnode.namespace" . }}
+spec:
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "ethnode-elc.labels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Values.global.elc }}
+  serviceName: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+  template:
+    metadata:
+      labels:
+        {{- include "ethnode-elc.labels" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Values.global.elc }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.settings.metrics.port | quote}}
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.autoMount }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- with .Values.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if or .Values.image.pullSecrets .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- include "ethnode-elc.imagePullSecrets" . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+      - name: init
+        image: {{ .Values.image.hooks.repository }}:{{ .Values.image.hooks.tag }}
+        volumeMounts:
+          - name: elc-pip
+            mountPath: /pip
+          - name: elc-data
+            mountPath: {{ .Values.settings.dataPath }}
+        securityContext:
+          runAsUser: 0                        
+        command:
+        - /bin/bash
+        - -xec
+        - |
+          # get the existing public ip to associate with
+          PUBLIC_IP_TO_ASSOCIATE=$(curl ifconfig.io)
+          echo "PUBLIC_IP_TO_ASSOCIATE: $PUBLIC_IP_TO_ASSOCIATE"
+          echo -ne "$PUBLIC_IP_TO_ASSOCIATE" > /pip/ip
+          
+          # update permissions on the data volume
+          chown -R 1000:1000 {{ .Values.settings.dataPath }}
+
+      containers:
+      - name: nethermind
+        image: {{ .Values.image.elc.repository }}:{{ .Values.image.elc.tag }}
+        imagePullPolicy: {{ .Values.image.elc.imagePullPolicy }}
+        resources:
+          requests:
+            cpu: "{{ .Values.resources.cpuRequest }}"
+            memory: "{{ .Values.resources.memRequest }}"
+          limits:
+            cpu: "{{ .Values.resources.cpuLimit }}"
+            memory: "{{ .Values.resources.memLimit }}"
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        volumeMounts:
+          - name: elc-pip
+            mountPath: /pip
+            readOnly: true
+          - name: elc-data
+            mountPath: {{ .Values.settings.dataPath }}
+          - name: elc-jwt
+            mountPath: {{ .Values.global.jwt.secretPath }}
+            readOnly: true            
+        ports:
+          - name: elc-rpc
+            containerPort: {{ .Values.settings.rpc.port }}
+            protocol: TCP
+          - name: elc-ws
+            containerPort: {{ .Values.settings.ws.port }}
+            protocol: TCP
+          - name: elc-rlpx
+            containerPort: {{ .Values.settings.p2p.port }}
+            protocol: TCP
+          - name: elc-discovery
+            containerPort: {{ .Values.settings.p2p.port }}
+            protocol: UDP
+          - name: elc-metrics
+            containerPort: {{ .Values.settings.metrics.port }}
+            protocol: TCP
+          - name: elc-engine
+            containerPort: {{ .Values.settings.engine.rpcPort }}
+            protocol: TCP  
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - |
+            exec
+
+            pip=$(cat /pip/ip)
+
+            /nethermind/nethermind \
+              --config={{ .Values.global.network }} \
+              --log={{ .Values.settings.logging }} \
+              --Network.ExternalIp=${pip} \
+              --Network.P2PPort={{ .Values.settings.p2p.port }} \
+              --Merge.Enabled=true \
+              --Sync.FastBlocks=true \
+              --Sync.FastSyncCatchUpHeightDelta=10000000000 \
+              --Sync.SnapSync=true \
+              --Metrics.Enabled=true \
+              --Metrics.ExposePort={{ .Values.settings.metrics.port }} \
+              --Metrics.IntervalSeconds=15 \
+              --Init.BaseDbPath={{ .Values.settings.dataPath }} \
+              --Init.ChainSpecPath="{{ .Values.settings.chainspecPath }}" \
+              --JsonRpc.Enabled={{ .Values.settings.rpc.enabled }} \
+              --JsonRpc.Host={{ .Values.settings.rpc.host | quote }} \
+              --JsonRpc.Port={{ .Values.settings.rpc.port }} \
+              --JsonRpc.EnabledModules={{ .Values.settings.rpc.api | toJson }} \
+              --JsonRpc.EngineEnabledModules="net,eth,subscribe,engine,web3,client" \
+              --JsonRpc.EnginePort={{ .Values.settings.engine.rpcPort }} \
+              --JsonRpc.JwtSecretFile="{{ .Values.global.jwt.secretPath }}/jwtSecret.hex" \
+              --HealthChecks.Enabled=true \
+              --HealthChecks.Slug="/health" \
+              --HealthChecks.PollingInterval=15
+
+        livenessProbe:
+          httpGet:
+            path: "/health"
+            port: {{ .Values.settings.rpc.port }}
+            httpHeaders:
+              - name:  Content-Type
+                value: application/json            
+          initialDelaySeconds: 120
+          periodSeconds: 30
+      
+      volumes:
+      - name: elc-jwt
+        secret:
+          secretName: {{ .Release.Name }}-ethnode-{{ .Values.global.network }}-{{ .Values.global.env }}-jwt         
+      - name: elc-pip
+        emptyDir: {}
+      - name: elc-data
+        persistentVolumeClaim:
+          claimName: {{ include "ethnode-elc.fullname" . }}-{{ .Values.global.network }}-{{ .Values.global.env }}-pvc
+
+{{- end }}
+
