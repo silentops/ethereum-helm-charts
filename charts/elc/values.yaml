@@ -65,9 +65,14 @@ resources:
   memRequest: "8G"
 
 image:
-  repository: none/none
-  tag: latest
-  imagePullPolicy: Always    
+  elc:
+    repository: none/none
+    tag: latest
+    imagePullPolicy: Always    
+  hooks:
+    repository: consensys/quorum-k8s-hooks
+    tag: 22.04
+    imagePullPolicy: Always
 
 storage:
   allowVolumeExpansion: true
@@ -108,7 +113,7 @@ settings:
     maxPeers: 25
   rpc:
     enabled: true
-    host: "0.0.0.0"
+    host: "127.0.0.1"
     port: 8545
     api: ["DEBUG","ETH", "ADMIN", "WEB3", "NET", "TRACE", "TXPOOL"]
     corsOrigins: ["*"]
@@ -116,13 +121,13 @@ settings:
     authenticationEnabled: false
   ws:
     enabled: false
-    host: "0.0.0.0"
+    host: "127.0.0.1"
     port: 8546
     api: ["DEBUG","ETH", "ADMIN", "WEB3", "IBFT", "NET", "TRACE", "TXPOOL"]
     authenticationEnabled: false
   graphql:
     enabled: false
-    host: "0.0.0.0"
+    host: "127.0.0.1"
     port: 8547
     corsOrigins: ["*"]
   txPool:

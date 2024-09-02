@@ -28,12 +28,14 @@ azure
 helm template jfbt ./ --namespace ethereum --create-namespace --values ./examples/mainnet/besu-teku-azure.yaml > ./artifacts/besu-teku-mainnet-azure.yml
 
 helm template jfgt ./ --namespace ethereum --create-namespace --values ./examples/mainnet/geth-teku-azure.yaml > ./artifacts/geth-teku-mainnet-azure.yml
-KUBECONFIG=~/.kube/besu-azure kubectl -n ethereum apply -f ./artifacts/geth-teku-mainnet-azure.yml
+
+helm template jfnt ./ --namespace ethereum --create-namespace --values ./examples/mainnet/nethermind-teku-azure.yaml > ./artifacts/nethermind-teku-mainnet-azure.yml
 
 ```
 
 ## TODO
 - fixme: storage class for local deployment?
-
 - support for validators + w3s
 - add on other clients
+
+

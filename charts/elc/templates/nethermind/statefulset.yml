@@ -1,4 +1,4 @@
-{{ if eq .Values.global.elc "geth" -}}
+{{ if eq .Values.global.elc "nethermind" -}}
 
 ---
 apiVersion: apps/v1
@@ -70,7 +70,7 @@ spec:
           chown -R 1000:1000 {{ .Values.settings.dataPath }}
 
       containers:
-      - name: geth
+      - name: nethermind
         image: {{ .Values.image.elc.repository }}:{{ .Values.image.elc.tag }}
         imagePullPolicy: {{ .Values.image.elc.imagePullPolicy }}
         resources:
@@ -126,44 +126,34 @@ spec:
 
             pip=$(cat /pip/ip)
 
-            /usr/local/bin/geth \
-              --{{ .Values.global.network }} \
-              --verbosity={{ .Values.settings.logging }} \
-              --nat extip:${pip} \
-              --log.format=json \
-              --db.engine=leveldb \
-              --state.scheme=hash \
-              --cache=1024 \
-              --cache.blocklogs=32 \
-              --snapshot=true \
-              --gcmode=archive \
-              --syncmode={{ .Values.settings.syncMode }} \
-              --datadir={{ .Values.settings.dataPath }} \
-              --port={{ .Values.settings.p2p.port }} \
-              --authrpc.jwtsecret="{{ .Values.global.jwt.secretPath }}/jwtSecret.hex" \
-              --authrpc.port={{ .Values.settings.engine.rpcPort }} \
-              --authrpc.vhosts={{ join "," .Values.global.jwt.hostAllowlist | quote }} \
-              --http \
-              --http.rpcprefix=/ \
-              --http.addr={{ .Values.settings.rpc.host | quote }} \
-              --http.port={{ .Values.settings.rpc.port }} \
-              --http.corsdomain={{ join "," .Values.settings.rpc.corsOrigins | quote }} \
-              --http.vhosts={{ join "," .Values.settings.rpc.vHosts | quote }} \
-              --http.api={{ join "," .Values.settings.rpc.api | quote }} \
-              {{ if  .Values.settings.ws.enabled -}} --ws \ {{ end -}} 
-              --ws.rpcprefix=/ \
-              --ws.addr={{ .Values.settings.ws.host | quote }} \
-              --ws.port={{ .Values.settings.ws.port }} \
-              --ws.origins={{ join "," .Values.settings.rpc.corsOrigins | quote }} \
-              --ws.api={{ join "," .Values.settings.ws.api | quote }} \
-              --metrics \
-              --pprof \
-              --pprof.addr={{ .Values.settings.metrics.host | quote }} \
-              --pprof.port={{ .Values.settings.metrics.port }}
+            /nethermind/nethermind \
+              --config={{ .Values.global.network }} \
+              --log={{ .Values.settings.logging }} \
+              --Network.ExternalIp=${pip} \
+              --Network.P2PPort={{ .Values.settings.p2p.port }} \
+              --Merge.Enabled=true \
+              --Sync.FastBlocks=true \
+              --Sync.FastSyncCatchUpHeightDelta=10000000000 \
+              --Sync.SnapSync=true \
+              --Metrics.Enabled=true \
+              --Metrics.ExposePort={{ .Values.settings.metrics.port }} \
+              --Metrics.IntervalSeconds=15 \
+              --Init.BaseDbPath={{ .Values.settings.dataPath }} \
+              --Init.ChainSpecPath="{{ .Values.settings.chainspecPath }}" \
+              --JsonRpc.Enabled={{ .Values.settings.rpc.enabled }} \
+              --JsonRpc.Host={{ .Values.settings.rpc.host | quote }} \
+              --JsonRpc.Port={{ .Values.settings.rpc.port }} \
+              --JsonRpc.EnabledModules={{ .Values.settings.rpc.api | toJson }} \
+              --JsonRpc.EngineEnabledModules="net,eth,subscribe,engine,web3,client" \
+              --JsonRpc.EnginePort={{ .Values.settings.engine.rpcPort }} \
+              --JsonRpc.JwtSecretFile="{{ .Values.global.jwt.secretPath }}/jwtSecret.hex" \
+              --HealthChecks.Enabled=true \
+              --HealthChecks.Slug="/health" \
+              --HealthChecks.PollingInterval=15
 
         livenessProbe:
           httpGet:
-            path: "/"
+            path: "/health"
             port: {{ .Values.settings.rpc.port }}
             httpHeaders:
               - name:  Content-Type
